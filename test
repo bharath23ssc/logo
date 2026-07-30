@@ -1,0 +1,839 @@
+**AI Monitoring & Observability in the Financial Industry (2025–2026 Deep Research Summary)**
+
+Financial institutions face unique pressures: regulatory scrutiny (model risk management), high-stakes decisions (credit, fraud, AML, trading, customer advice), data sensitivity (PCI-DSS, PII), audit requirements, and the rapid shift from traditional ML to generative AI / LLMs / agents. Point-in-time validation is insufficient; continuous monitoring is now expected.
+
+### Regulatory Drivers
+- **US**: Long-standing **SR 11-7** (Federal Reserve) / OCC Bulletin 2011-12 required model inventory, independent validation, ongoing monitoring, and governance. In April 2026, agencies issued revised interagency guidance (**SR 26-2 / OCC Bulletin 2026-13**). It narrows the formal definition of “model,” adopts a more risk-based approach (most relevant for banks >$30B assets), and **explicitly excludes generative AI and agentic AI** as “novel and rapidly evolving,” with a forthcoming Request for Information (RFI) planned. Banks are still expected to apply core MRM principles (inventory, risk tiering, monitoring, human oversight, audit trails) to consequential GenAI systems.
+- **Other jurisdictions**: EU AI Act (high-risk systems), DORA (ICT risk and third-party resilience), MAS Singapore good practices (AI inventory, ongoing monitoring of robustness/stability/fairness/data quality, cross-functional oversight forums), RBI India draft guidance (continuous model-risk measurement, human oversight for automated decisions, adversarial testing), HKMA examples of AI in financial crime.
+- Core expectations across regimes: centralized inventory, risk-tiered monitoring intensity, continuous performance/drift monitoring, change control, explainability/fairness evidence, and durable audit trails.
+
+### How Banks Actually Monitor AI
+Banks monitor across **predictive ML** (credit scoring, fraud, AML) and **generative/agentic systems** (chatbots, copilots, decision explainers, transaction investigation agents).
+
+**Key monitored dimensions**:
+- **Operational / Signal**: Latency, throughput, error rates, token usage, inference cost, cache hit rates, dependency health.
+- **Quality / Evaluation**: Accuracy, precision/recall, drift (data, concept, prediction, embedding), fairness/bias, hallucination/groundedness/faithfulness, toxicity, PII leakage, prompt-injection success, robustness under edge cases.
+- **Governance**: Model/prompt/version registry, change logs, approval workflows, retention policies.
+- **Feedback**: User ratings, corrections, escalations, incident reports.
+- **Cost & Efficiency**: Token spend, human-review cost, ROI of models.
+- **AI-specific risks**: Prompt injection, retrieval-source quality, hallucination sensitivity, cost class.
+
+**Architecture pattern** (closely matches the five-plane model in your Nomura notes):
+1. **Trace Store** (central foundation) — full execution history (inputs/outputs, prompts, retrieved context, tool calls, model/prompt versions, latency, cost, failures). Increasingly OpenTelemetry (OTel) GenAI semantic conventions.
+2. **Signal** — real-time operational health and alerts.
+3. **Evaluation** — continuous scoring (benchmark datasets + production samples + LLM-as-judge + human review).
+4. **Governance** — inventory, policies, risk tiering, lifecycle controls.
+5. **Feedback** — closed-loop improvement.
+
+Higher-risk applications (customer-facing credit decisions, AML, trading) receive stricter frequency, depth of evaluation, alert sensitivity, and change-control rigor. AI-specific attributes (hallucination risk, prompt-injection exposure) refine monitoring without always changing the official MRM tier.
+
+**Change management**: Every prompt update, model upgrade, retrieval-source change, or threshold change is versioned, re-evaluated, logged, and approved according to risk tier. Regressions can block release.
+
+### Existing Platforms and How They Work
+
+| Platform | Strengths in Finance | How It Works (Core Mechanics) | Notable FS Usage / Notes |
+|----------|----------------------|-------------------------------|--------------------------|
+| **Fiddler AI** | Unified ML + LLM observability, strong XAI, fairness, Trust Models for LLM metrics (hallucination, toxicity, PII) without external API calls | Pre- and post-production monitoring; dashboards for drift/quality; Slice & Explain; 3D UMAP; custom alerts; report generator for MRM/GRC. Integrates with SageMaker, Bedrock, OpenTelemetry. | Leading FS institution case (accelerated GenAI/agent deployment, eliminated data-sharing risk via in-environment Trust Models). Explicit financial-services data sheet. |
+| **Arize AI / Phoenix** | Real-time drift, performance tracing, bias, embedding analysis; strong agent tracing | OTel-native; automated monitors; cohort-level analysis; Python SDK integration into CI/CD; eval linkage via span_id. Phoenix is OSS self-host option. | America First Credit Union: >30 models (loan origination, credit risk, fraud, recommendations); real-time vs previous 24–48h delay; >500% ROI year 1, 2–3 FTEs saved, ~2 new models/month. Also used for GenAI decision explainers. |
+| **IBM watsonx.governance** (+ OpenPages) | Full enterprise GRC + model risk; lifecycle documentation (AI Factsheets); fairness/drift/accuracy monitors for both ML and GenAI | Governance console for risk/compliance; OpenScale for continuous monitoring against thresholds; workflow automation; regulatory compliance accelerators (EU AI Act, NIST, etc.). Hybrid/on-prem capable. | Banco do Brasil (with EY): real-time monitoring, automated risk assessments, audit documentation. Strong for large international banking groups. |
+| **ModelOp Center** | Central AI inventory (all model types including vendor/embedded/agentic), automated policy workflows, AI Governance Score, SR 11-7 templates | System of record + process automation engine + reporting/testing suite. Risk tiering, mandatory metadata, out-of-box tests (PII, hallucination, etc.), automated documentation. | Fidelity, Royal Bank of Canada Capital Markets. Pre-packaged regulatory templates; focuses on visibility and enforceable controls without slowing innovation. |
+| **Datadog AI / New Relic AI** | Extends existing APM into LLM traces | Native GenAI semantic conventions; flame graphs; cost attribution; retention aligned with existing SOX/FFIEC practices. | Tier-1 banks already on Datadog APM; strong for operational correlation. |
+| **Future AGI / Comet Opik / others** | Fintech-focused OTel-native spans with span-layer PII/PAN redaction, WORM-aligned export, eval-to-span joining | Per-decision span attribution critical for adverse-action evidence and audits. | NatWest uses Opik for continuous evaluation of Cora+ banking assistant (helpfulness, safety, hallucination detection). |
+| **Open-source / Build** | Evidently AI (drift/performance testing), Langfuse (LLM tracing, now with ClickHouse), Arize Phoenix, custom OTel + Tempo/Honeycomb + internal WORM store | Flexible but requires engineering effort for PCI redaction, immutable retention, and SR-aligned evidence packages. | Preferred by Tier-1 banks with on-prem mandates or strong ML platform teams. |
+| **Traditional MRM + extensions** | SAS Model Risk Management, ValidMind, Credo AI, OneTrust, Databricks + Tiger Analytics solution | Inventory, validation metrics (PSI, CSI, etc.), Unity Catalog governance, automated pipelines. | Deep integration with existing banking analytics stacks. |
+
+**Additional specialized systems**:
+- Core banking vendors (Fiserv agentOS, Temenos, Backbase, Oracle) embed governed agent platforms with kill switches, human-in-the-loop, and auditability.
+- Fraud/AML-specific: Dynamic risk scoring platforms that feed case-management systems; Genpact Transaction Monitoring Analyst (agentic, human-supervised).
+
+### Typical Implementation Pattern in Banks
+1. **Inventory** every AI use case (internal, vendor, embedded) with risk tier and owner.
+2. Instrument production with tracing (preferably OTel).
+3. Central Trace Store feeds Signal (ops alerts), Evaluation (continuous scoring), and Governance dashboards.
+4. Feedback loops improve prompts/datasets and trigger revalidation.
+5. Change control gates releases; higher tiers require independent validation and formal approval.
+6. Evidence packages (performance trends, drift alerts resolved, evaluation results, version history) are generated for MRM, internal audit, and regulators.
+
+**Results reported**: Faster detection of drift (hours/days → real-time), reduced manual MRM effort (20–80% in some claims), higher model deployment velocity, stronger audit readiness, and lower operational/regulatory risk.
+
+### Alignment with Your Nomura Notes
+The five-plane architecture (Trace Store as foundation → Signal / Evaluation / Governance / Feedback) is industry best practice and directly reflected in platforms such as Fiddler, Arize, watsonx.governance, and ModelOp. Tier-proportional treatment and change-as-versioned-event principles are standard under MRM frameworks.
+
+**AI Monitoring Metrics & Evaluation Methods in Financial Services (Detailed Overview)**
+
+Banks and financial institutions implement a layered set of metrics that cover traditional machine learning (credit scoring, fraud, AML, risk models) and generative AI / LLMs / agents (chatbots, copilots, decision explainers, investigation agents). Metrics are risk-tiered: higher-risk applications (customer-facing credit decisions, AML, trading advice) receive more frequent and deeper monitoring.
+
+### 1. Core Categories of Metrics
+
+#### A. Performance / Quality Metrics
+**Traditional ML (supervised models)**  
+- Accuracy, Precision, Recall, F1-score  
+- AUC-ROC, Gini coefficient, KS statistic  
+- Log loss, Mean Absolute Error (MAE), Mean Squared Error (MSE), MAPE (for regression)  
+- Confusion matrix components and calibration plots  
+
+**Generative AI / LLMs**  
+- **Hallucination rate** — % of outputs containing fabricated facts, figures, citations, or reasoning errors  
+- **Faithfulness / Groundedness** — % of response supported by retrieved context (critical for RAG systems)  
+- **Relevance, Coherence, Completeness**  
+- Citation accuracy rate (verifiable sources)  
+- Abstention / Refusal rate (how often the model declines to answer)  
+- User override / escalation rate (human reviewers reject or heavily edit output)  
+
+#### B. Drift & Stability Metrics
+- **Data drift** — shifts in input feature distributions (Population Stability Index / PSI, Characteristic Stability Index / CSI, KL divergence, Wasserstein distance, embedding drift for vector models)  
+- **Prediction / Score drift** — shifts in model output distributions  
+- **Concept drift** — changes in the relationship between inputs and outcomes (e.g., changing fraud patterns or customer behavior)  
+- Population / segment stability (by customer type, channel, risk tier, protected class)  
+- Rank-order stability and score concentration  
+
+#### C. Fairness & Bias Metrics
+- Statistical parity / Demographic parity difference  
+- Equalized odds, Equal opportunity  
+- Disparate impact ratio (commonly flagged below 0.8 threshold)  
+- Segment-level performance gaps (protected classes, thin-file customers, etc.)  
+
+#### D. Operational / Signal Metrics
+- Latency (p50, p95, p99), Throughput  
+- Error / Failure rate  
+- Token usage and inference cost (input + output tokens, cost per session/request)  
+- Cache hit rate, Dependency health  
+- Session length / conversation length (for chatbots)  
+
+#### E. Safety, Security & Compliance Metrics
+- Toxicity / Harmful content rate  
+- PII / Sensitive data leakage rate  
+- Prompt-injection / Jailbreak success rate  
+- Adversarial robustness  
+- Guardrail trigger rate  
+
+#### F. Business & Feedback Metrics
+- Business KPI impact (approval rates, false-positive rates in fraud/AML, revenue impact, customer satisfaction)  
+- User ratings / corrections  
+- Incident / escalation volume  
+- Human-in-the-loop frequency  
+
+### 2. How These Metrics Are Evaluated
+
+Evaluation occurs in two main phases and uses a combination of automated and human methods.
+
+#### Pre-Deployment / Validation Evaluation
+- **Benchmark / Golden datasets** — curated historical or synthetic cases with known ground truth.  
+- **Hold-out / Out-of-time testing** and stress/edge-case testing.  
+- **LLM-as-a-Judge** — a second (often stronger) LLM scores outputs on faithfulness, relevance, toxicity, compliance, etc., against predefined rubrics. Multiple judges + consensus improves reliability.  
+- **Human SME review** — subject-matter experts score samples using structured rubrics (especially for high-risk or subjective outputs).  
+- **Deterministic rules** — hard checks (schema validation, regulatory keyword filters, calculation verification).  
+- **Adversarial / Red-teaming** — prompt-injection attempts, jailbreaks, abnormal inputs.  
+- **Champion-challenger** comparisons and A/B testing.  
+- Fairness testing across protected attributes.  
+- Documentation of limitations, assumptions, and mitigants (required under MRM frameworks).
+
+#### Continuous / Production Monitoring (Post-Deployment)
+- **Real-time or near-real-time dashboards** fed from a central Trace Store (OpenTelemetry spans are increasingly standard).  
+- **Automated statistical monitors** with pre-defined thresholds (e.g., PSI > 0.25 triggers review; faithfulness floor of ~0.85 for many regulated RAG use cases).  
+- **Sampling strategies** — random production samples + targeted sampling of high-risk or low-confidence outputs.  
+- **LLM-as-a-Judge on production traffic** (or lightweight in-environment models such as Fiddler’s Trust/Centor Models to avoid external API latency and data leakage).  
+- **Human feedback loops** — ratings, corrections, escalations feed evaluation datasets and trigger revalidation.  
+- **Periodic revalidation** — frequency driven by risk tier:  
+  - Critical / Tier-1: continuous automated + quarterly (or post-change) full review  
+  - Medium: monthly checks + semi-annual revalidation  
+  - Low: quarterly spot checks + annual review  
+- **Change control gates** — any prompt, model, retrieval source, or threshold change must re-run evaluation suites; regressions can block release.  
+- **Root-cause analysis** tools (Slice & Explain, cohort analysis, 3D UMAP visualizations) to diagnose why a metric moved.
+
+#### Platform-Specific Support (Examples)
+- **Fiddler**: 35+ built-in ML metrics + extensive LLM metrics (hallucination, toxicity, PII, faithfulness); custom metrics; Trust Service for low-latency in-environment evaluation; strong XAI for root cause.  
+- **Arize / Phoenix**: Real-time drift, performance, bias, embedding analysis; span-level tracing and eval linkage.  
+- **IBM watsonx.governance / OpenScale**: Fairness, drift, quality, and GenAI-specific monitors with threshold alerts and AI Factsheets.  
+- **ModelOp Center**: Automated testing suites, risk-tiered workflows, and governance scoring.  
+- **MAS-observed practices (Singapore banks)**: Ongoing monitoring of robustness, stability, data quality, and fairness against predefined or tiered thresholds; incident tracking and escalation.
+
+### Practical Implementation Notes from Industry
+- Metrics must be **use-case specific**. A fraud model prioritizes precision/recall and false-positive cost; a credit chatbot prioritizes faithfulness, refusal rate, and fairness.  
+- **Thresholds are risk-tiered and reviewed periodically** (often quarterly).  
+- Pure accuracy metrics are insufficient for GenAI — faithfulness, hallucination rate, and human override rate carry more regulatory weight.  
+- Evidence packages (trends, alerts resolved, evaluation results, version history) are generated for Model Risk Management (MRM), internal audit, and regulators.  
+- Many institutions combine automated scoring (LLM-as-Judge + statistical tests) with targeted human review to balance scale and rigor.
+
+This metric and evaluation framework directly supports the five-plane observability architecture (Trace → Signal / Evaluation / Governance / Feedback) and the tier-proportional monitoring approach described in your earlier Nomura notes.
+
+Would you like a sample metric dashboard layout, risk-tier matrix with recommended frequencies, or example evaluation rubrics for specific use cases (e.g., credit underwriting vs. customer chatbot)?
+
+**Widely Implemented LLM Observability & Evaluation Practices in Financial Services**
+
+Banks and financial institutions have standardized a practical set of approaches for **LLM observability** and **LLM evaluation (evals)** as they move from experiments to production (customer-facing assistants, internal copilots, document processing, fraud/AML agents, etc.). These practices are driven by regulatory expectations (model risk management, audit trails, fairness, consumer protection) and the high cost of hallucinations or policy violations.
+
+### 1. Common LLM Use Cases in Finance
+| Use Case | Examples | Risk Level | Key Concerns |
+|----------|----------|------------|--------------|
+| Customer-facing chatbots / digital assistants | NatWest Cora+, spending queries, fraud reporting, mortgage guidance | High | Hallucination, advice accuracy, PII leakage, regulatory compliance |
+| Internal copilots | Research analysis, report drafting, code assistance, relationship-manager tools | Medium–High | Factual accuracy, source grounding, productivity vs. risk |
+| Document extraction & summarization | RFP processing, contract review, financial report parsing, transaction-terms extraction | Medium–High | Numerical consistency, evidence traceability, completeness |
+| Fraud / AML / dispute triage agents | Multi-turn conversation agents that classify and route cases | High | Classification accuracy, policy adherence, escalation quality |
+| Decision explainers & risk tools | Credit decision narratives, adverse-action explanations | High | Fairness, explainability, auditability |
+| Agentic multi-step workflows | Tool-using agents for compliance checks, data retrieval, multi-app orchestration | High | Tool selection accuracy, end-to-end reliability, autonomy limits |
+
+### 2. What Kind of Observability Is Widely Implemented
+
+Most institutions follow a **trace-first architecture** (often OpenTelemetry / GenAI semantic conventions):
+
+- **Full execution traces** — Every interaction records: user input / prompt, system prompt version, retrieved context (RAG), tool/API calls, model version, intermediate steps, final output, latency, token counts/cost, and any failures.
+- **Central Trace Store** — Single source of truth used for dashboards, alerts, audits, and evaluation sampling.
+- **Real-time Signal monitoring** — Latency (p50/p95/p99), error rates, throughput, token cost, cache hits, dependency health.
+- **Quality overlays on traces** — Automated scoring of faithfulness, hallucination, toxicity, PII, relevance, etc., attached back to the original span.
+- **Audit & governance layer** — Immutable retention, version history, change logs, risk-tier metadata, human override records — required for MRM, internal audit, and regulators.
+
+**Popular platforms in production finance use**:
+- Fiddler AI (strong XAI + in-environment Trust Models for low-latency LLM metrics)
+- Arize AI / Phoenix (real-time drift, embedding analysis, agent tracing)
+- Comet Opik (used by NatWest for continuous evaluation of Cora+)
+- Datadog AI, Langfuse (self-hosted for data residency), LangSmith
+- Hybrid / custom OTel + internal stores for Tier-1 banks with strict on-prem requirements
+
+Observability is almost always **tier-proportional**: higher-risk customer-facing or decision-influencing systems get deeper tracing, more frequent evaluation, tighter alerts, and stricter change control.
+
+### 3. LLM Evaluation (Evals) — What Is Widely Implemented
+
+Evaluation happens in two complementary modes:
+
+#### A. Pre-deployment / Offline Evals
+- Golden / benchmark datasets (domain-specific questions with expected answers or reference documents)
+- **LLM-as-a-Judge** (most common scalable method) — A second LLM scores outputs on faithfulness, relevance, coherence, safety, compliance, numerical consistency, etc., using structured rubrics
+- Human SME review on statistically significant samples (especially high-risk outputs)
+- Adversarial / red-teaming (prompt injection, jailbreaks, edge cases, missing-information scenarios)
+- Champion-challenger comparisons and A/B testing of prompts/models
+- Deterministic checks (schema validation, calculation verification, regulatory keyword filters)
+
+#### B. Continuous / Online Production Evals
+- Sampling of live traffic (random + targeted high-risk or low-confidence samples)
+- Automated scoring attached to traces (faithfulness floor often set around 0.85 for regulated RAG workflows)
+- Trend monitoring of key metrics with threshold-based alerts
+- Human feedback loops (user ratings, corrections, escalations) that enrich evaluation datasets
+- Periodic full revalidation (frequency based on risk tier: continuous + quarterly for critical systems)
+
+**Core metrics that are almost universally tracked for LLMs in finance**:
+
+| Category | Key Metrics | Typical Threshold / Focus |
+|----------|-------------|---------------------------|
+| **Factual Quality** | Faithfulness / Groundedness, Hallucination rate, Citation accuracy, Numerical consistency | Faithfulness ≥ 0.85; low hallucination rate |
+| **Task Quality** | Relevance, Coherence, Completeness, Answer correctness | Use-case specific |
+| **Safety & Compliance** | Toxicity, PII leakage, Prompt-injection / Jailbreak success, Policy violation rate | Near-zero for high-risk |
+| **Behavioral** | Refusal / Abstention rate, User override / Escalation rate | Track trends; calibrate by use case |
+| **Operational** | Latency (p95/p99), Token cost, Throughput, Error rate | Business SLOs |
+| **Stability** | Input/output distribution drift, Embedding drift, Version degradation | PSI-style or semantic drift alerts |
+
+Domain-specific additions often include evidence traceability, workflow completeness, decision usefulness, and reviewability/auditability (especially in capital-markets and credit workflows).
+
+### 4. How Evaluation Is Typically Implemented in Practice
+1. Define use-case-specific success criteria and rubrics with business + risk + compliance stakeholders.
+2. Build or curate golden datasets + production sampling strategy.
+3. Run LLM-as-a-Judge (or lightweight in-environment models) at scale for continuous scoring.
+4. Layer human review on critical samples and disagreements.
+5. Attach scores to traces so any production issue can be inspected end-to-end.
+6. Feed results into governance workflows (alerts → investigation → change control → revalidation).
+7. Generate audit-ready evidence packages automatically.
+
+**NatWest example (publicly referenced)**: Continuous evaluation of Cora+ with Opik scoring helpfulness, safety, coherence, accuracy, and automatic hallucination detection — enabling safe scaling of the customer-facing assistant.
+
+### Summary – Industry Standard Pattern
+- **Observability** = Trace everything + real-time operational + quality signals + durable audit trail.
+- **LLM Evals** = Hybrid of LLM-as-a-Judge + human SME + deterministic rules, run both offline (before release) and continuously on production samples.
+- Metrics prioritize **faithfulness / hallucination control**, safety/PII, refusal behavior, and operational SLOs, with risk-tiered intensity.
+- Platforms provide the plumbing; banks still own the risk-tier definitions, thresholds, and governance processes.
+
+This combination is what allows institutions to scale LLMs while satisfying model risk management, regulators, and internal audit requirements.
+
+Would you like a deeper dive into any specific use case (e.g., customer chatbot vs. document extraction vs. fraud agent), sample evaluation rubrics, or a recommended metric + threshold matrix by risk tier?
+
+
+**Monitoring Techniques, Vendors & Capabilities in Financial AI Platforms (2026)**
+
+Financial institutions use a mix of traditional ML monitoring and specialized LLM/agent observability. The core techniques are consistent across vendors, while capabilities differ in depth for regulated environments (audit trails, PII handling, explainability, risk-tiering, and SR 11-7 / equivalent evidence generation).
+
+### Common Monitoring Techniques Used in Finance
+These are widely implemented across platforms:
+
+1. **Tracing / Span-level Observability**  
+   Full capture of prompts, responses, retrieved context (RAG), tool/API calls, model versions, intermediate reasoning steps, latency, and token cost. Increasingly based on OpenTelemetry (OTel) GenAI semantic conventions.
+
+2. **Drift Detection**  
+   Data drift, prediction drift, embedding drift, concept drift (using PSI, CSI, statistical tests, or embedding similarity).
+
+3. **Quality & Trust Metrics (especially for LLMs)**  
+   Faithfulness/groundedness, hallucination rate, relevance, coherence, toxicity, PII/PHI leakage, prompt-injection/jailbreak success, refusal rate.
+
+4. **Performance & Operational Metrics**  
+   Latency (p50/p95/p99), throughput, error rates, token usage/cost, cache hit rates.
+
+5. **Fairness & Bias Monitoring**  
+   Demographic parity, equalized odds, disparate impact, segment-level performance gaps.
+
+6. **Continuous Evaluation (Online + Offline)**  
+   LLM-as-a-Judge, human SME sampling, deterministic rules, production traffic scoring with threshold alerts.
+
+7. **Root-Cause Analysis & Visualization**  
+   Slice-and-explain, cohort analysis, 3D UMAP for embeddings, flame graphs / trace trees.
+
+8. **Governance & Audit Layers**  
+   Model/prompt inventory, version control, change logs, immutable retention, automated evidence packages for MRM/auditors.
+
+9. **Guardrails / Runtime Enforcement**  
+   Real-time blocking or flagging of unsafe outputs (hallucination, toxicity, PII, policy violations).
+
+10. **Feedback Loops**  
+    User ratings, corrections, escalations feeding back into evaluation datasets and retraining signals.
+
+---
+
+### Key Vendors and Their Capabilities (Finance-Focused)
+
+| Vendor | Core Strength in Finance | Key Monitoring Techniques & Capabilities | Best Fit |
+|--------|---------------------------|------------------------------------------|----------|
+| **Fiddler AI** | Enterprise AI Observability + Trust for regulated FS | Full ML + LLM monitoring; 14–80+ enrichments (hallucination, faithfulness, toxicity, PII across 35+ entity types, safety); Fiddler Trust/Centor Models (in-environment, low-latency <100ms scoring, no data egress); 3D UMAP visualization; Slice & Explain; custom metrics; RAG monitoring; agentic hierarchy (app → session → agent → span); guardrails; strong XAI; audit-ready reports. Integrates with SageMaker, Bedrock. | Large banks needing explainability, in-environment safety scoring, and unified ML/LLM monitoring |
+| **Arize AI / Phoenix** | Real-time observability + evaluation for ML & agents | OTel-native tracing (spans for prompts, retrieval, tools, agents); online + offline evals (LLM-as-Judge); embedding drift & clustering; performance tracing; bias detection; agent trajectory views; production alerting; self-hostable Phoenix (OSS). Strong for debugging multi-step agents. | Engineering-led teams, credit unions, fintechs wanting real-time drift + agent tracing (e.g., America First Credit Union case) |
+| **IBM watsonx.governance** (with OpenScale) | Full lifecycle GRC + model risk for large banks | Continuous monitoring of fairness, drift, quality, toxicity, PII; AI Factsheets (model “nutritional labels”); agent monitoring & insights (conversation/message/tool-level metrics); threshold alerts; inventory & discovery of shadow AI; OpenPages integration for broader GRC; in-the-loop and offline evaluators (faithfulness, relevance); audit documentation. | Large international banks already in IBM ecosystem needing end-to-end governance + MRM alignment |
+| **Comet Opik** | Production evaluation + tracing for customer-facing AI | Production tracing + online evaluations; 20+ bespoke LLM-as-a-Judge metrics (including ComplianceRiskJudge); hallucination detection; helpfulness, safety, coherence, accuracy scoring; audit log generation comparing versions; SME annotation collaboration. Used by NatWest for Cora+ digital assistant. | Banks scaling customer-facing assistants that need continuous quality scoring + regulatory audit artifacts |
+| **ModelOp Center** | AI lifecycle governance & inventory | Centralized inventory (all model types including agents/vendor); automated risk-tiered workflows; out-of-box testing suites; performance & risk monitoring; AI Governance Score; policy enforcement; SR 11-7-style templates; automated documentation. | Institutions needing strong inventory + process automation across hundreds of models |
+| **Datadog AI / LLM Observability** | Extends existing APM into LLM/agent monitoring | Native GenAI semantic conventions; full APM-style traces + flame graphs; cost/latency/token attribution; correlation with infrastructure; retention aligned with existing SOX/FFIEC practices. | Tier-1 banks already running Datadog APM that want to extend rather than add a new platform |
+| **Others / Complementary** | — | **Langfuse** (OSS tracing + evals, strong self-host); **Evidently AI** (drift & performance testing, often used in CI/CD); **SAS Model Risk Management** (traditional MRM-heavy banks); **ValidMind / Credo AI / OneTrust** (governance & policy layers). Custom OTel + internal WORM stores remain common at the largest banks for data residency. | Varies by existing stack and data-residency needs |
+
+### How These Techniques Are Typically Applied
+- **Pre-production** — Offline evals on golden datasets + adversarial testing + champion-challenger.
+- **Production** — Continuous sampling + automated scoring attached to traces + threshold alerts + human review of high-risk cases.
+- **Change management** — Any prompt/model/retrieval change triggers re-evaluation; regressions can block release.
+- **Risk-tiered intensity** — Higher-risk use cases (customer advice, credit decisions, AML) get deeper tracing, more frequent evals, and stricter guardrails.
+
+Most mature financial institutions combine one primary observability platform (Fiddler, Arize, watsonx, or Datadog) with governance tooling (ModelOp or watsonx.governance) and internal processes. The trend in 2026 is toward unified control planes that cover traditional ML, LLMs, and multi-agent systems under the same audit and risk framework.
+
+Would you like a deeper comparison of any two vendors, a sample monitoring architecture diagram description, or recommendations mapped to specific use cases (e.g., customer chatbot vs. internal research agent vs. fraud triage)?
+
+
+**JPMorgan Chase AI Monitoring Capabilities (Publicly Available Information, as of mid-2026)**
+
+JPMorgan Chase is one of the most advanced banks in enterprise AI adoption. It reports hundreds to over 1,000 AI use cases in production, significant business value generation, and broad employee access via its internal platform. Public disclosures emphasize strong process-based governance, risk-tiering, logging, and custom guardrails rather than naming specific commercial observability vendors (e.g., Fiddler or Arize). Details on exact technical metrics or third-party tooling are limited, as expected for a regulated institution.
+
+### 1. Central Platform & Access Control — LLM Suite
+- Proprietary, model-agnostic generative AI platform rolled out to ~250,000 employees (roughly half use it daily/weekly in some reports).
+- Acts as a controlled gateway: employees interact with frontier models (OpenAI, Anthropic, and others) through one environment.
+- **Key monitoring/governance features**:
+  - Logs user prompts and responses for compliance and audit.
+  - Enforces access controls and data usage policies.
+  - Integrates with firm data and entitlements systems.
+  - Model-agnostic design allows swapping models while maintaining consistent controls.
+  - Updated periodically (reported every ~8 weeks) with new enterprise data and capabilities.
+- Purpose: Prevent tool sprawl, centralize monitoring, and ensure data does not leave controlled boundaries (third parties cannot train on proprietary JPMorgan data).
+
+### 2. Model Risk Governance & Registration
+- **Mandatory registration**: “You cannot use an AI model without registering the model in our control process.”
+- All use cases go through a control process scaled to risk level.
+- High-risk and customer-facing use cases require independent risk management validation (Model Risk Management / independent review team).
+- Compliance and Operational Risk organizations review risk and control assessments.
+- Dedicated firm-wide **Model Risk Governance function** and AI governance structures oversee development, deployment, and ongoing oversight.
+- Developers must adequately test use cases before production.
+
+### 3. Custom Guardrails — Fence Framework
+- Internally developed **Fence** guardrail framework (Machine Learning Center of Excellence).
+- Uses data-driven methods and **synthetic data generation** to proactively identify, test, and mitigate vulnerabilities at the individual use-case level.
+- Targets issues such as:
+  - Hallucinations
+  - Topic drift
+  - Prompt injection
+- Provides custom, adaptive, use-case-specific guardrails.
+- Applied to simple Q&A through advanced search and other interactions.
+- Internal benchmarks indicate it improves safety and reliability beyond some industry solutions.
+- Supports continuous innovation in guardrail design as AI evolves.
+
+### 4. Usage & Adoption Monitoring (Especially for Engineers/Developers)
+- Internal dashboards track AI tool usage across tens of thousands of employees (e.g., GitHub Copilot, Anthropic Claude / Claude Code).
+- Metrics include:
+  - Provisioned vs. active users
+  - Recent activity dates, office location, reporting lines
+  - Token usage and spending (per user and aggregate)
+  - Weighted scoring of interactions (higher weight for proactive prompting; lower for passive acceptance of AI-generated code)
+- Purpose (per bank statements): Measure effectiveness of AI investments, identify training/support needs, and drive adoption — **not** used for individual performance management.
+- Visibility of some dashboards extends to peers/managers in technology divisions.
+
+### 5. Agentic AI & Runtime Controls
+- Focus on securing autonomous/semi-autonomous agents.
+- Architecture principles include:
+  - Agents given defined roles, permitted actions, and limits.
+  - Controlled operating environments (e.g., separation of employee desktop from agent environment).
+  - Agents ideally have identity but limited or no broad entitlements.
+  - Authorization enforcement for agent-to-system and agent-to-agent interactions.
+  - Continuous runtime monitoring of behavior.
+  - Tamper-evident, complete runtime records for audits, investigations, and incident response.
+- Controls are risk-aligned: lighter for confined/read-only agents; robust continuous enforcement for high-capability agents (especially those handling untrusted inputs + sensitive data + external actions).
+- Emphasis on accountability, containment, and auditability at the point of execution.
+
+### 6. Supporting Capabilities & Related Monitoring
+- **Explainable AI Center of Excellence** — Focus on transparency, fairness, and methods to make model decisions understandable.
+- **OmniAI** — Centralized machine learning and AI development platform providing governed compute environments, security, and auditability controls.
+- Fraud, payments, and anomaly detection platforms incorporate AI/ML with monitoring components (e.g., real-time screening, data validation checks running nightly on large volumes of points, anomaly flagging).
+- Cybersecurity applications: GenAI copilots for threat modeling (e.g., Auspex) and use of advanced models for vulnerability detection.
+- Data governance led by firm-wide Chief Data Officer to ensure AI-ready data quality and access control.
+
+### Summary of Approach
+JPMorgan’s public posture prioritizes:
+- Centralized, controlled platforms (LLM Suite) over fragmented tools.
+- Risk-tiered governance and mandatory registration.
+- Custom, adaptive guardrails (Fence) for LLM-specific risks.
+- Detailed usage telemetry for adoption and investment tracking.
+- Runtime controls and audit trails especially for agents.
+- Independent validation for higher-risk use cases.
+
+Exact production metrics (e.g., specific faithfulness thresholds, drift detection methods, or commercial observability platforms in use) are not publicly detailed. The emphasis is on process, registration, logging, custom guardrails, and risk-aligned controls rather than a single named vendor dashboard.
+
+This aligns with broader industry patterns (inventory + risk tiering + continuous monitoring + audit evidence) but is executed at very large scale with significant internal tooling.
+
+Sources include JPMorgan technology blogs, leadership statements, Business Insider reporting on internal dashboards, case studies, and conference disclosures. Capabilities evolve rapidly; the above reflects publicly available information as of mid-2026.
+
+https://www.jpmorganchase.com/about/technology/blog/fence-framework
+
+
+**Morgan Stanley AI Monitoring & Governance Capabilities (Public Information)**
+
+Morgan Stanley has been an early mover in generative AI (one of the first major financial firms to partner with OpenAI) and places heavy emphasis on **evaluation frameworks**, **human accountability**, **centralized control**, and **risk-tiered governance**. Public details focus more on process and evaluation practices than on naming specific commercial observability vendors.
+
+### 1. Evaluation (Evals) Framework — Core Monitoring Capability
+Morgan Stanley developed a rigorous evaluation framework, initially for its **AI @ Morgan Stanley Assistant** (used by wealth management advisors for information retrieval, summarization, and insights).
+
+Key practices:
+- Pre-deployment testing of every use case against real-world scenarios with expert feedback.
+- Regression suites of sample questions run regularly (including daily testing in some descriptions) to catch weaknesses and ensure compliance.
+- **Live production monitoring**: Sampling a percentage of everyday employee interactions (e.g., reviewing ~100 questions per day) using teams of annotators with structured rubrics for grading quality, accuracy, and other criteria.
+- The framework and taxonomy developed for the assistant were extended firm-wide and shared with Model Risk Management, Legal, and Compliance teams as a baseline for other GenAI use cases.
+- Focus on continuous improvement of retrieval methods, accuracy, and compliant outputs.
+
+This eval-driven approach is repeatedly highlighted as central to successful production deployment.
+
+### 2. Human-in-the-Loop & Accountability
+- Core principle: There must always be **human accountability**, even with automation. “The humans press the button.”
+- AI is treated as a co-worker/assistant rather than fully autonomous in higher-risk workflows.
+- In agentic deployments (e.g., P&L reconciliation), systems were deliberately made *less* autonomous, with tight human loops; human decisions are iteratively turned into rules the system can apply.
+- Advisors and users review and adjust AI outputs (e.g., meeting summaries, client notes, follow-ups) before finalizing.
+
+### 3. Governance Structure
+- Senior governance committee (or equivalent) oversees responsible AI deployment, covering model validity, privacy controls, cybersecurity, and ethics.
+- Full transparency on what is being done with GenAI, with tracking of issue intake and results.
+- Collaboration across business, legal, compliance, and risk teams.
+- Change management to adapt traditional ML model risk processes to generative AI and agentic systems.
+- Dedicated roles (e.g., AI Oversight and Governance positions) focused on intake management, risk review, prioritization, alignment to frameworks, and **post-production monitoring** — especially for agentic AI, orchestration, and RAG systems.
+
+### 4. Centralized Platform / LLM Gateway Controls
+- Centralized LLM gateway / orchestration layer for external model calls.
+- Enables visibility into who is calling models, token usage, queries being made, and rate limits.
+- Supports cost control and governance reporting (dashboards/reports for Model Risk, Legal, Compliance).
+- On-prem components and zero-data-retention arrangements with providers (e.g., OpenAI) to keep sensitive data (including PII/MNPI) within controlled boundaries.
+- Common evaluation patterns, accelerators, and “Lego-block” governed building blocks so employees can compose workflows safely.
+- Sandbox environments for experimentation with defined paths to production.
+
+### 5. Broader Monitoring & Risk Practices
+- Continuous monitoring after deployment is referenced as an important aspect of the platform and governance processes.
+- Risk tollgates and defined autonomy levels for different types of agents.
+- Focus on monitoring prompts/outputs for anomalous behavior (with plans to use AI to surveil AI usage against codes of conduct).
+- Partnerships for governed ML platforms (e.g., Dataiku + Databricks) supporting audit readiness, data governance, and risk automation while accelerating development.
+- Emphasis on employee education/training alongside technology (described as critical to safe democratization).
+
+### Summary Comparison Style (vs. JPMorgan)
+| Aspect                      | Morgan Stanley Focus                          | Notes |
+|----------------------------|-----------------------------------------------|-------|
+| Evaluation                 | Very strong (detailed evals + production sampling + rubrics) | Core differentiator in public materials |
+| Human oversight            | Explicit core principle                       | Strong emphasis |
+| Centralized control        | LLM gateway + common patterns                 | Cost, usage, and query visibility |
+| Guardrails / Runtime       | Present via platform & process                | Less public detail on custom frameworks like JPMorgan’s Fence |
+| Agent governance           | Autonomy levels, risk tollgates, human loops  | Active in production workflows |
+| Usage tracking             | Token/query visibility via gateway            | Present but less dashboard-focused in public reports |
+
+**Sources** include OpenAI case study on Morgan Stanley, Scale AI interview with Kaitlin Elliott (firmwide Generative AI Solutions), statements from Jeff McMillan and other leaders, VentureBeat reporting on agent deployments, and public talks on scaling agentic AI.
+
+Detailed internal technical metrics, exact drift thresholds, or commercial observability tool names (if used) are not publicly disclosed. The public narrative centers on evaluation rigor, human accountability, centralized governance, and continuous oversight rather than a single named monitoring platform.
+
+Would you like links to the main public sources, a comparison table with JPMorgan, or focus on any specific area (evals, agents, wealth management assistant, etc.)?
+
+
+
+
+**Recommendations for a bank like Nomura**:
+- Start with a centralized Trace Store (OTel-based) that can feed both commercial platforms and internal systems.
+- Prioritize platforms with strong finance references, PCI/PII handling, immutable retention, and MRM evidence generation (Fiddler, Arize, watsonx, ModelOp).
+- Apply risk-tiered intensity and treat GenAI with the same rigor as traditional models even where formal guidance has a temporary carve-out.
+- Combine vendor tooling with internal governance processes rather than pure build or pure buy.
+
+This landscape evolves quickly (especially around agentic systems and the expected US RFI on GenAI MRM). Continuous evaluation of platforms against your specific risk tiers, data residency, and existing tech stack is essential.
+
+**Morgan Stanley AI Monitoring & Governance Capabilities (Public Information)**
+
+Morgan Stanley has been an early mover in generative AI (one of the first major financial firms to partner with OpenAI) and places heavy emphasis on **evaluation frameworks**, **human accountability**, **centralized control**, and **risk-tiered governance**. Public details focus more on process and evaluation practices than on naming specific commercial observability vendors.
+
+### 1. Evaluation (Evals) Framework — Core Monitoring Capability
+Morgan Stanley developed a rigorous evaluation framework, initially for its **AI @ Morgan Stanley Assistant** (used by wealth management advisors for information retrieval, summarization, and insights).
+
+Key practices:
+- Pre-deployment testing of every use case against real-world scenarios with expert feedback.
+- Regression suites of sample questions run regularly (including daily testing in some descriptions) to catch weaknesses and ensure compliance.
+- **Live production monitoring**: Sampling a percentage of everyday employee interactions (e.g., reviewing ~100 questions per day) using teams of annotators with structured rubrics for grading quality, accuracy, and other criteria.
+- The framework and taxonomy developed for the assistant were extended firm-wide and shared with Model Risk Management, Legal, and Compliance teams as a baseline for other GenAI use cases.
+- Focus on continuous improvement of retrieval methods, accuracy, and compliant outputs.
+
+This eval-driven approach is repeatedly highlighted as central to successful production deployment.
+
+### 2. Human-in-the-Loop & Accountability
+- Core principle: There must always be **human accountability**, even with automation. “The humans press the button.”
+- AI is treated as a co-worker/assistant rather than fully autonomous in higher-risk workflows.
+- In agentic deployments (e.g., P&L reconciliation), systems were deliberately made *less* autonomous, with tight human loops; human decisions are iteratively turned into rules the system can apply.
+- Advisors and users review and adjust AI outputs (e.g., meeting summaries, client notes, follow-ups) before finalizing.
+
+### 3. Governance Structure
+- Senior governance committee (or equivalent) oversees responsible AI deployment, covering model validity, privacy controls, cybersecurity, and ethics.
+- Full transparency on what is being done with GenAI, with tracking of issue intake and results.
+- Collaboration across business, legal, compliance, and risk teams.
+- Change management to adapt traditional ML model risk processes to generative AI and agentic systems.
+- Dedicated roles (e.g., AI Oversight and Governance positions) focused on intake management, risk review, prioritization, alignment to frameworks, and **post-production monitoring** — especially for agentic AI, orchestration, and RAG systems.
+
+### 4. Centralized Platform / LLM Gateway Controls
+- Centralized LLM gateway / orchestration layer for external model calls.
+- Enables visibility into who is calling models, token usage, queries being made, and rate limits.
+- Supports cost control and governance reporting (dashboards/reports for Model Risk, Legal, Compliance).
+- On-prem components and zero-data-retention arrangements with providers (e.g., OpenAI) to keep sensitive data (including PII/MNPI) within controlled boundaries.
+- Common evaluation patterns, accelerators, and “Lego-block” governed building blocks so employees can compose workflows safely.
+- Sandbox environments for experimentation with defined paths to production.
+
+### 5. Broader Monitoring & Risk Practices
+- Continuous monitoring after deployment is referenced as an important aspect of the platform and governance processes.
+- Risk tollgates and defined autonomy levels for different types of agents.
+- Focus on monitoring prompts/outputs for anomalous behavior (with plans to use AI to surveil AI usage against codes of conduct).
+- Partnerships for governed ML platforms (e.g., Dataiku + Databricks) supporting audit readiness, data governance, and risk automation while accelerating development.
+- Emphasis on employee education/training alongside technology (described as critical to safe democratization).
+
+### Summary Comparison Style (vs. JPMorgan)
+| Aspect                      | Morgan Stanley Focus                          | Notes |
+|----------------------------|-----------------------------------------------|-------|
+| Evaluation                 | Very strong (detailed evals + production sampling + rubrics) | Core differentiator in public materials |
+| Human oversight            | Explicit core principle                       | Strong emphasis |
+| Centralized control        | LLM gateway + common patterns                 | Cost, usage, and query visibility |
+| Guardrails / Runtime       | Present via platform & process                | Less public detail on custom frameworks like JPMorgan’s Fence |
+| Agent governance           | Autonomy levels, risk tollgates, human loops  | Active in production workflows |
+| Usage tracking             | Token/query visibility via gateway            | Present but less dashboard-focused in public reports |
+
+**Sources** include OpenAI case study on Morgan Stanley, Scale AI interview with Kaitlin Elliott (firmwide Generative AI Solutions), statements from Jeff McMillan and other leaders, VentureBeat reporting on agent deployments, and public talks on scaling agentic AI.
+
+Detailed internal technical metrics, exact drift thresholds, or commercial observability tool names (if used) are not publicly disclosed. The public narrative centers on evaluation rigor, human accountability, centralized governance, and continuous oversight rather than a single named monitoring platform.
+
+Would you like links to the main public sources, a comparison table with JPMorgan, or focus on any specific area (evals, agents, wealth management assistant, etc.)?
+**AI Monitoring & Governance Framework**  
+*(Practical framework for financial institutions – aligned with industry practices from major banks, MRM principles, and modern LLM/agent observability)*
+
+This framework integrates **continuous monitoring**, **risk-tiered controls**, **evaluation**, and **governance** into a single operating model. It is designed for banks and financial services firms deploying traditional ML, generative AI, and agentic systems.
+
+---
+
+### 1. Guiding Principles
+- Continuous monitoring is more effective than one-time validation.
+- Monitoring intensity must match risk (tier-proportional treatment).
+- Every AI system must have a single source of truth (Trace Store / inventory).
+- Humans remain accountable (“human presses the button”).
+- Every change is a versioned event that requires evaluation.
+- Evidence must be audit-ready for MRM, internal audit, regulators, and business stakeholders.
+- Centralized platform + decentralized use cases (govern once, use many).
+
+---
+
+### 2. Five-Plane Observability Architecture
+```
+AI Applications / Agents
+          │
+          ▼
+   Trace Store (Central Repository)
+          │
+    ┌─────┼───────────────┐
+    │     │      │      │ │
+    ▼     ▼      ▼      ▼ ▼
+ Signal Evaluation Governance Feedback Evidence
+```
+
+| Plane | Purpose | Key Activities |
+|-------|---------|----------------|
+| **Trace** | Complete execution history | Capture inputs, outputs, prompts, context, tool calls, model/prompt versions, latency, cost, failures |
+| **Signal** | Real-time operational health | Latency, throughput, error rate, token usage, cost, dependency health, alerts |
+| **Evaluation** | Continuous quality assessment | Benchmarks, production samples, LLM-as-Judge, human review, regression detection |
+| **Governance** | Policy & lifecycle control | Inventory, risk tiering, version control, approvals, retention, metadata |
+| **Feedback** | Real-world learning loop | User ratings, corrections, incidents, escalations → improve prompts/datasets |
+
+---
+
+### 3. Risk Tiering & Proportional Monitoring
+
+| Risk Tier | Examples | Monitoring Intensity | Evaluation Frequency | Change Control | Human Oversight |
+|-----------|----------|----------------------|----------------------|----------------|-----------------|
+| **Critical / Tier 1** | Customer-facing advice, credit decisions, AML/fraud agents, trading signals | Continuous + deep | Continuous sampling + quarterly full review | Formal approval + independent validation | Mandatory review before action |
+| **High / Tier 2** | Internal research copilots, document summarization for clients, risk reports | Near real-time | Weekly/monthly + post-change | Formal approval | Sampling + escalation paths |
+| **Medium / Tier 3** | Internal productivity tools, code assistants, non-client research | Daily/periodic | Monthly + post-change | Standard approval | Spot checks |
+| **Low / Tier 4** | Experimental sandboxes, non-sensitive internal tools | Periodic | Quarterly | Lightweight | Minimal |
+
+**AI-specific risk attributes** (refine monitoring without changing official tier):  
+Prompt-injection risk, hallucination sensitivity, retrieval-source risk, cost class, autonomy level.
+
+---
+
+### 4. Core Monitoring Capabilities
+
+**A. Technical / Operational Metrics**  
+- Latency (p50/p95/p99), throughput, error rate  
+- Token usage & inference cost  
+- Cache hit rate, dependency health  
+
+**B. Quality Metrics (especially LLMs)**  
+- Faithfulness / Groundedness  
+- Hallucination rate  
+- Relevance, Coherence, Completeness  
+- Toxicity / Safety  
+- PII / sensitive data leakage  
+- Refusal / Abstention rate  
+- User override / escalation rate  
+
+**C. Drift & Stability**  
+- Data drift, prediction drift, embedding drift (PSI, CSI, semantic measures)  
+- Concept drift  
+
+**D. Fairness & Bias**  
+- Demographic parity, equalized odds, disparate impact, segment performance gaps  
+
+**E. Agent-specific**  
+- Tool selection accuracy, trajectory success, autonomy boundary adherence, human hand-off rate  
+
+---
+
+### 5. Evaluation Approach
+- **Pre-deployment**: Golden datasets + adversarial/red-teaming + LLM-as-Judge + human SME review + champion-challenger  
+- **Production**: Continuous sampling of live traffic + automated scoring attached to traces + human annotation of high-risk samples  
+- **Regression suites**: Run on every material change  
+- **Frequency**: Driven by risk tier (see table above)
+
+---
+
+### 6. Governance Processes
+
+1. **Inventory & Registration**  
+   - Central registry of every AI system, model, prompt version, agent, and use case  
+   - Mandatory registration before production use  
+
+2. **Risk Classification**  
+   - Assign official MRM tier + AI-specific risk attributes  
+
+3. **Change Management**  
+   - Every prompt, model, retrieval source, threshold, or tool change is versioned  
+   - Re-evaluate → block on regression → log → approve according to tier  
+
+4. **Independent Validation**  
+   - Required for higher tiers (independent of developers)  
+
+5. **Ongoing Monitoring & Alerts**  
+   - Threshold-based alerts → investigation → remediation → evidence package  
+
+6. **Audit & Evidence Trail**  
+   - Immutable records of performance, monitoring activities, evaluations, approvals, and incidents  
+
+7. **Feedback & Continuous Improvement**  
+   - Closed loop from production issues back into evaluation datasets and prompt/model improvements  
+
+---
+
+### 7. Organizational Roles
+- **Model / Use-Case Owner** — Business accountability  
+- **AI Platform / Engineering** — Trace Store, observability tooling, gateway  
+- **Model Risk Management (2nd line)** — Independent validation, tiering, ongoing challenge  
+- **Compliance / Legal / Operational Risk** — Policy alignment, regulatory evidence  
+- **AI Governance Committee** — Senior oversight, exceptions, firm-wide standards  
+- **Internal Audit (3rd line)** — Independent assurance  
+
+---
+
+### 8. Implementation Roadmap (Recommended Sequence)
+1. Establish central Trace Store + inventory  
+2. Define risk tiers and minimum monitoring standards  
+3. Deploy core observability (Signal + Evaluation) for existing high-risk use cases  
+4. Stand up LLM gateway / control plane with logging and rate limits  
+5. Implement continuous evaluation pipelines and production sampling  
+6. Formalize change-control and independent validation workflows  
+7. Expand feedback loops and automated evidence generation  
+8. Iterate and scale to agentic systems  
+
+---
+
+This framework is intentionally practical and can be adapted to your existing Model Risk Management policies. It combines the original five-plane architecture with the risk-tiered, evaluation-heavy, and human-accountable practices observed at leading banks.
+
+Would you like me to expand any section (e.g., detailed metrics catalog, sample RACI matrix, policy checklist, or a one-page visual version)?
+
+**AI Governance Framework for Monitoring, Evaluation & Observability**
+
+This is a complete, practical framework designed for financial institutions. It combines governance, continuous monitoring, and evaluation into one operating model.
+
+---
+
+### 1. Framework Objectives
+- Ensure AI systems remain reliable, safe, fair, and compliant after deployment
+- Detect degradation (drift, hallucination, bias, performance drop) early
+- Provide continuous, audit-ready evidence for Model Risk Management, auditors, and regulators
+- Apply monitoring intensity proportional to risk
+- Close the loop between production behavior and model improvement
+
+---
+
+### 2. Core Architecture: Five-Plane Observability Model
+
+```
+AI Applications / Agents
+          │
+          ▼
+   ┌──────────────────┐
+   │   Trace Store    │  ← Single source of truth
+   └────────┬─────────┘
+            │
+   ┌────────┼────────────────────┐
+   │        │         │          │
+   ▼        ▼         ▼          ▼
+Signal   Evaluation  Governance  Feedback
+```
+
+| Plane | Purpose | Key Outputs |
+|-------|---------|-------------|
+| **Trace** | Complete record of every AI interaction | Inputs, outputs, prompts, context, tool calls, versions, latency, cost, failures |
+| **Signal** | Real-time operational health | Latency, errors, throughput, token cost, alerts |
+| **Evaluation** | Continuous quality measurement | Faithfulness, hallucination, accuracy, fairness, drift scores |
+| **Governance** | Control, policy & lifecycle | Inventory, risk tiers, approvals, change logs, retention |
+| **Feedback** | Learning from reality | User ratings, corrections, incidents → improve models/prompts |
+
+---
+
+### 3. Governance Structure for Monitoring & Evaluation
+
+**Key Roles**
+- **Use Case / Model Owner** — Business accountability for performance
+- **AI Platform Team** — Owns Trace Store, observability tooling, LLM gateway
+- **Model Risk Management (2nd Line)** — Independent challenge, validation, tiering
+- **Compliance / Legal / Operational Risk** — Policy alignment and regulatory evidence
+- **AI Governance Committee** — Senior oversight and exceptions
+- **Internal Audit (3rd Line)** — Independent assurance
+
+**Mandatory Controls**
+- Every AI system must be registered in a central inventory before production
+- Risk tier must be assigned (Critical / High / Medium / Low)
+- Monitoring plan must be defined and approved according to tier
+- Every material change requires re-evaluation and approval
+
+---
+
+### 4. Risk-Tiered Monitoring & Evaluation
+
+| Risk Tier | Monitoring Frequency | Evaluation Depth | Change Control | Human Oversight |
+|-----------|----------------------|------------------|----------------|-----------------|
+| **Critical** | Continuous | Deep + continuous sampling | Formal + Independent validation | Mandatory review |
+| **High** | Near real-time | Strong + frequent sampling | Formal approval | Sampling + escalation |
+| **Medium** | Daily / Periodic | Standard | Standard approval | Spot checks |
+| **Low** | Periodic | Lightweight | Lightweight | Minimal |
+
+---
+
+### 5. Monitoring Domains & Metrics
+
+**A. Operational (Signal)**
+- Latency (p50, p95, p99)
+- Error / Failure rate
+- Throughput
+- Token usage & cost
+- Dependency health
+
+**B. Quality & Trust (Evaluation)**
+- Faithfulness / Groundedness
+- Hallucination rate
+- Relevance, Coherence, Completeness
+- Toxicity / Safety score
+- PII leakage rate
+- Refusal / Abstention rate
+- User override rate
+
+**C. Drift & Stability**
+- Data drift (PSI, CSI, distribution shifts)
+- Prediction / Score drift
+- Embedding drift
+- Concept drift
+
+**D. Fairness**
+- Demographic parity
+- Equalized odds
+- Disparate impact
+- Segment performance gaps
+
+**E. Agent-Specific**
+- Tool selection accuracy
+- Trajectory success rate
+- Autonomy boundary adherence
+- Human hand-off frequency
+
+---
+
+### 6. Evaluation Framework
+
+**Two Layers of Evaluation**
+
+1. **Pre-Deployment / Change Evaluation**
+   - Golden / benchmark datasets
+   - Adversarial & red-teaming tests
+   - LLM-as-a-Judge + Human SME review
+   - Champion-Challenger comparison
+   - Regression suite execution
+
+2. **Continuous Production Evaluation**
+   - Automated scoring of live traffic (sampling)
+   - LLM-as-a-Judge on production samples
+   - Human annotation of high-risk or low-confidence outputs
+   - Trend analysis and threshold alerting
+
+**Evaluation Cadence** (by risk tier)
+- Critical → Continuous + full review quarterly or on change
+- High → Weekly/Monthly + on change
+- Medium/Low → Monthly/Quarterly + on change
+
+---
+
+### 7. Key Governance Processes
+
+1. **Inventory & Registration** — All AI assets registered with risk tier and owner
+2. **Monitoring Plan Approval** — Plan defined and approved before go-live
+3. **Change Management** — Version every change → Re-evaluate → Approve/Block → Log
+4. **Alert & Incident Management** — Threshold breach → Investigate → Remediate → Document
+5. **Periodic Review** — Scheduled revalidation based on tier
+6. **Evidence Generation** — Automated packages for MRM, audit, and regulators
+7. **Feedback Loop** — Production issues feed back into evaluation datasets and model improvement
+
+---
+
+### 8. Minimum Evidence Requirements
+- Trace history (retained according to policy)
+- Performance and quality trend reports
+- Drift detection results
+- Evaluation scores (pre and post deployment)
+- Change logs and approval records
+- Incident and remediation records
+- Fairness and safety assessments
+
+---
+
+### 9. Implementation Principles
+- Trace Store is the foundation — everything else derives from it
+- Prefer automated continuous evaluation + targeted human review
+- Centralize observability tooling; decentralize use-case ownership
+- Align monitoring intensity strictly to risk tier
+- Treat GenAI and agents with the same rigor as traditional models (even where formal guidance has temporary carve-outs)
+- Design for auditability from day one
+
+---
+
+This framework is ready to be adapted into policy documents, RACI matrices, or technical implementation plans.
+
+Would you like me to expand it further into:
+- A detailed policy template
+- Sample metrics catalog with thresholds
+- RACI matrix
+- One-page visual summary
+- Or a version mapped to specific standards (NIST AI RMF, ISO 42001, MAS, SR 26-2)? mm
