@@ -1,0 +1,159 @@
+**AI Monitoring / Observability Platforms (especially strong in Financial Domain)**
+
+First, a quick clarification on **Rogo AI** (rogo.ai):  
+Rogo is **not** an AI monitoring or observability platform. It is a **finance-native generative AI / agent platform** built for investment banking, private equity, and research workflows (comps, memos, models, diligence, etc.). It emphasizes security, auditability, citations, single-tenant options, and governance features suitable for regulated finance firms (clients include firms like Nomura, Jefferies, Lazard, etc.).
+
+Below are the actual **AI monitoring, observability, and model risk platforms** that are widely used or strongly positioned in financial services:
+
+### Leading AI Monitoring & Observability Platforms for Finance
+
+| Platform | Type | Strength in Financial Domain | Key Capabilities |
+|----------|------|------------------------------|------------------|
+| **Fiddler AI** | AI Observability + Trust | Very strong (dedicated Financial Services data sheet & case studies) | Drift, fairness, hallucination, toxicity, PII detection, explainability (XAI), Trust Models (in-environment scoring), Slice & Explain, agent monitoring, MRM/GRC reporting |
+| **Arize AI / Phoenix** | ML + LLM Observability | Strong (used by credit unions & fintechs; fraud, credit, risk use cases) | Real-time drift, performance tracing, embedding analysis, LLM/agent tracing (OTel-native), bias detection, online evals |
+| **IBM watsonx.governance** | Full AI Governance + Monitoring | Excellent for large banks | Continuous fairness/drift/quality monitoring, AI Factsheets, agent insights, inventory, OpenPages GRC integration, audit documentation |
+| **ModelOp Center** | AI Lifecycle Governance & Monitoring | Strong in banking MRM | Central inventory, automated testing, risk-tiered workflows, performance monitoring, AI Governance Score, SR 11-7 style templates |
+| **Comet Opik** | LLM/Agent Evaluation + Tracing | Proven in banking (e.g. NatWest Cora+) | Production tracing, continuous evaluation (helpfulness, safety, hallucination, coherence), audit logs, LLM-as-a-Judge |
+| **Datadog LLM Observability** | APM + LLM Observability | Good for Tier-1 banks already on Datadog | Full traces, cost/latency/token tracking, GenAI semantic conventions, infrastructure correlation |
+| **ValidMind** | Model Risk Management focused | Purpose-built for banks | Validation, monitoring, documentation automation aligned with SR 11-7 / OSFI E-23 style requirements |
+| **Arthur AI** | Monitoring + Bias + LLM Observability | Regulated industries focus | Performance monitoring, bias management, LLM observability, private deployment options |
+
+### Other Notable / Complementary Tools
+- **Future AGI** — Strong fintech focus (OTel-native, PCI/PII redaction, immutable retention)
+- **Langfuse** (open-source) — Popular for self-hosted LLM tracing & evals
+- **Evidently AI** — Drift & performance testing (often used in CI/CD)
+- **SAS Model Risk Management** — Traditional banking MRM environments
+- **Credo AI / OneTrust** — More governance/policy oriented, sometimes paired with monitoring tools
+
+### Quick Guidance
+- **Best pure observability + explainability for regulated finance** → **Fiddler AI**
+- **Best real-time drift + agent tracing** → **Arize AI**
+- **Best full enterprise governance + monitoring** → **IBM watsonx.governance** or **ModelOp**
+- **Best continuous LLM evaluation in production** → **Comet Opik** or Fiddler
+- **Already heavy on Datadog** → Extend with Datadog LLM Observability
+
+Would you like a deeper comparison of any 2–3 of these platforms, focus only on LLM/agent monitoring tools, or platforms that combine monitoring + finance-specific workflow AI (closer to the Rogo style)?
+
+**AI Monitoring Platforms Strong in the Financial Domain**  
+*(Deep research summary – 2026)*
+
+Here are the leading platforms used for **AI/ML/LLM monitoring, observability, evaluation, and governance** in banking, fintech, and financial services, with their key capabilities and finance-relevant features.
+
+---
+
+### 1. Fiddler AI
+**Best for**: Regulated financial institutions needing deep observability + explainability + runtime guardrails for both traditional ML and GenAI/agents.
+
+**Key Capabilities & Features**:
+- Unified monitoring for predictive ML (credit, fraud, AML) and generative AI / agents
+- **LLM-specific**: Hallucination detection, faithfulness, toxicity, PII/PHI leakage, prompt injection/jailbreak detection
+- **Fiddler Trust / Centor Models**: In-environment scoring (no external API calls, <100ms latency) for safety and quality
+- Drift detection, data quality, performance metrics
+- Strong **Explainable AI** (Slice & Explain, SHAP, 3D UMAP visualization)
+- Fairness & bias monitoring
+- Real-time **Guardrails** that can block or moderate unsafe outputs
+- Custom metrics and business KPI linking
+- Automated MRM / GRC report generation
+- Agent hierarchy visibility (application → session → agent → spans)
+- Strong finance use cases: lending decisions, trading agents, fraud, customer chatbots, underwriting
+
+**Finance Strength**: Dedicated Financial Services data sheet and multiple large bank case studies. Excellent for audit-ready evidence and compliance.
+
+---
+
+### 2. Arize AI (AX + Phoenix)
+**Best for**: Real-time drift detection, performance tracing, and agent observability — popular with credit unions, fintechs, and engineering-led bank teams.
+
+**Key Capabilities & Features**:
+- OTel-native tracing for LLMs and multi-step agents
+- Real-time drift (feature, prediction, embedding)
+- Performance monitoring (accuracy, false positive/negative rates critical for lending/fraud)
+- Bias / fairness tracing
+- Online and offline evaluations (LLM-as-a-Judge)
+- Root-cause analysis and cohort slicing
+- Guardrails (input/output filtering, re-ask, block)
+- Production dashboards + threshold-based alerts
+- Phoenix (open-source) for self-hosted / sovereign deployments
+- Strong in credit decisioning, fraud detection, and lending model monitoring
+
+**Finance Strength**: Proven with America First Credit Union and other financial institutions; good for high-volume production monitoring.
+
+---
+
+### 3. IBM watsonx.governance
+**Best for**: Large banks that want full enterprise AI governance + continuous monitoring in one platform (especially IBM ecosystem customers).
+
+**Key Capabilities & Features**:
+- Continuous monitoring of fairness, drift, quality, toxicity, and PII
+- **AI Factsheets** (“nutritional labels”) that capture model metadata across the lifecycle
+- Model Health monitor (latency, throughput, data size)
+- LLM/prompt template evaluation (accuracy, fairness, prohibited content)
+- Agent monitoring and insights (conversation, message, and tool-level metrics)
+- Threshold alerts and anomaly detection
+- Integration with IBM OpenPages for broader GRC
+- Inventory, risk scoring, and workflow automation
+- Support for both traditional ML and generative AI / agents
+
+**Finance Strength**: Built for regulated environments; strong on documentation, audit trails, and model risk management alignment.
+
+---
+
+### 4. ModelOp Center
+**Best for**: Banks needing a centralized AI system of record + automated lifecycle governance and monitoring across hundreds of models (including vendor and agentic AI).
+
+**Key Capabilities & Features**:
+- Comprehensive inventory of all AI (ML, GenAI, agents, vendor models)
+- Automated risk tiering and policy enforcement
+- Continuous monitoring for bias, drift, performance, and cost
+- Out-of-the-box tests and validation workflows
+- AI Governance Score (executive-level compliance metric)
+- Model cards and automated documentation
+- Runtime policy enforcement via gateway integration
+- Token usage / FinOps tracking
+- Pre-packaged templates for SR 11-7 / SR 26-2, EU AI Act, NIST, etc.
+- Strong agentic AI governance (inventory, approvals, blocking of unapproved agents)
+
+**Finance Strength**: Explicitly positioned for banks, insurers, and investment firms; used by major financial institutions for MRM-scale governance.
+
+---
+
+### 5. Comet Opik
+**Best for**: Continuous evaluation and tracing of customer-facing LLM applications and agents in banking.
+
+**Key Capabilities & Features**:
+- Production tracing + online evaluations
+- 20+ LLM-as-a-Judge metrics (including ComplianceRiskJudge, hallucination, helpfulness, safety, coherence, accuracy)
+- Custom metric definition
+- Automated audit log generation comparing evaluation scores across versions
+- Collaboration features for financial/legal SMEs to annotate outputs
+- Strong focus on detecting policy violations and hallucinations before they create regulatory risk
+- Used by **NatWest** for continuous evaluation of its Cora+ digital banking assistant
+
+**Finance Strength**: Proven production use in a major UK bank for customer-facing GenAI quality and safety monitoring.
+
+---
+
+### 6. Other Notable Platforms
+
+| Platform | Focus | Finance-Relevant Strengths |
+|----------|-------|---------------------------|
+| **Datadog LLM Observability** | APM + LLM tracing | Excellent if the bank already runs Datadog; strong cost, latency, and infrastructure correlation |
+| **ValidMind** | Model Risk Management | Purpose-built for bank MRM (validation, monitoring, documentation automation) |
+| **Arthur AI** | Monitoring + Bias + LLM Observability | Strong private deployment options and bias management for regulated industries |
+| **Future AGI** | Fintech-focused observability | OTel-native, strong PCI/PII redaction, immutable retention suited for mid-market lenders and neobanks |
+
+---
+
+### Summary Recommendation for Financial Institutions
+
+| Need | Recommended Platform |
+|------|----------------------|
+| Deep observability + explainability + guardrails | **Fiddler AI** |
+| Real-time drift + agent tracing | **Arize AI** |
+| Full enterprise governance + monitoring | **IBM watsonx.governance** or **ModelOp** |
+| Continuous LLM evaluation in production | **Comet Opik** or Fiddler |
+| Already on Datadog stack | **Datadog LLM Observability** |
+
+These platforms are the ones most frequently referenced in financial services for production AI monitoring, evaluation, and governance as of mid-2026.
+
+Would you like a side-by-side comparison table of any 3–4 platforms, deeper details on a specific one, or focus only on LLM/agent monitoring capabilities?
