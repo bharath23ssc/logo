@@ -1,0 +1,128 @@
+ In the generated dashboard, the top KPI card section uses different types of micro-visualizations instead of putting the same mini-chart in every card.
+
+1. Overdue — Alert / status micro-chart
+
+Card contains:
+
+Large number: 7 items
+
+Red warning/exclamation icon inside a soft red circular background
+
+Small comparison text: vs last 7 days
+
+Red upward trend indicator: ↑ 16%
+
+
+Visual purpose: Quickly tells the user that overdue work is increasing and needs attention.
+
+
+---
+
+2. On-Time Delivery — Target + trend indicator
+
+Card contains:
+
+Large KPI: 92%
+
+Green check-circle icon
+
+Supporting text: target 90%
+
+Small green upward indicator: ↑ 4%
+
+
+Visual purpose: Shows actual performance against a target.
+
+You could make this more visually interesting with a small horizontal progress bar, for example:
+
+██████████████████░░ 92%
+
+with a thin marker at 90%.
+
+
+---
+
+3. Avg Utilisation — Mini radial gauge
+
+This is probably the most useful alternative to the micro line chart.
+
+Card contains:
+
+Large KPI: 68%
+
+Circular/radial gauge around the upper-right area
+
+Gauge represents utilisation from 0–100%
+
+Small text: of capacity 100%
+
+Blue upward trend: ↑ 8%
+
+
+Conceptually:
+
+╭─────╮
+      ╱         ╲
+     │    ↗      │
+      ╲         ╱
+        ╰─────╯
+
+Visual purpose: Immediately communicates how much capacity is being consumed.
+
+
+---
+
+4. WIP — Capacity progress bar
+
+Card contains:
+
+Large KPI: 19 items
+
+Purple layers/stack icon
+
+Text: limit 20
+
+Horizontal progress bar
+
+95% displayed beside the bar
+
+
+Conceptually:
+
+Limit 20
+
+███████████████████░  95%
+19 items
+
+Visual purpose: Shows that WIP is very close to its maximum limit.
+
+
+---
+
+If you want different micro-charts in every card
+
+For your dashboard, I'd recommend this combination:
+
+Card	Micro-visual
+
+Overdue	Mini sparkline + red alert icon
+On-Time Delivery	Target progress bar
+Avg Utilisation	Radial gauge
+WIP	Capacity progress bar
+
+
+This gives the KPI row visual variety without making it cluttered.
+
+Prompt you can give another image model
+
+> Redesign the four KPI cards at the top of the Risk Forge dashboard. Keep the cards clean, professional, enterprise-style and compact. Do not use the same micro-chart in every card.
+
+Overdue card: Show 7 items, a red alert icon in a soft circular background, a small 7-day sparkline showing an upward trend, and “↑16% vs last 7 days”.
+
+On-Time Delivery card: Show 92%, a green check icon, a thin horizontal progress bar showing performance against a 90% target, and “↑4%”.
+
+Avg Utilisation card: Show 68%, with a compact semicircular/radial gauge showing 68% utilisation, plus “of capacity 100%” and “↑8%”.
+
+WIP card: Show 19 items, a purple stacked-layer icon, a horizontal capacity progress bar at 95%, “limit 20”, and “95%”.
+
+Use subtle borders, rounded corners, light shadows, generous whitespace, small secondary labels, large bold KPI numbers, and a modern enterprise risk-management dashboard aesthetic. Keep all four cards aligned to the same height and width.
